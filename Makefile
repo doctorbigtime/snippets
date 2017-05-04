@@ -14,12 +14,15 @@ CFLAGS = -std=c++1y -g -Wall $(INCLUDES) -MT $@ -MMD -MF $*.d
 %.d: ;
 .PRECIOUS: %.d
 
-.PHONY: all run_tests 
+.PHONY: all run_tests clean
 
 all: run_tests
 
 run_tests: unit_tests
 	./unit_tests
+
+clean:
+	rm -f unit_tests $(BINARIES) 
 
 $(GTEST_LIB): $(wildcard $(GTEST_ROOT)/src/*.cc)
 	cd $(GTEST_ROOT) && cmake . && make
