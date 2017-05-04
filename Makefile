@@ -14,9 +14,11 @@ CFLAGS = -std=c++1y -g -Wall $(INCLUDES) -MT $@ -MMD -MF $*.d
 %.d: ;
 .PRECIOUS: %.d
 
-.PHONY: all run_tests clean
+.PHONY: all test run_tests clean
 
-all: run_tests
+all: test
+
+test: run_tests
 
 run_tests: unit_tests
 	./unit_tests
