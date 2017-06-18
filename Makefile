@@ -5,7 +5,7 @@ TEST_DEPS = $(TEST_OBJS:.o=.d)
 GTEST_ROOT = thirdparty/googletest/googletest
 GTEST_LIB = $(GTEST_ROOT)/libgtest_main.a
 INCLUDES := -I$(GTEST_ROOT)/include
-LDFLAGS = -L$(GTEST_ROOT) -lgtest_main -lgtest
+LDFLAGS = -L$(GTEST_ROOT) -lgtest_main -lgtest -lboost_system -lboost_filesystem
 CFLAGS = -std=c++1y -g -Wall $(INCLUDES) -MT $@ -MMD -MF $*.d 
 
 %.o: %.cpp
