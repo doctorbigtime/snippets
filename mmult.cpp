@@ -35,41 +35,46 @@ double* naive_mmult(double* const A, double* const B, int N)
 double* smarter_mmult(double* const A, double* const B, int N)
 {
     double* C = new2dMatrix(N, N);
-    for(auto col = 0; col < N; ++col)
-    {
+    /*for(auto col = 0; col < N; ++col)
         for(auto row = 0; row < N; ++row)
-            C[row*N + col] = .0;
+            C[row*N + col] = .0;*/
+    for(auto i = 0; i < N; ++i)
         for(auto k = 0; k < N; ++k)
-            for(auto row = 0; row < N; ++row)
-                C[col*N + row] += A[row*N + k] * B[k*N + col];
-    }
-    return C;
+            for(auto j = 0; j < N; ++j)
+            {
+                /*std::cout << "C[" << (i*N +j) << "] += A["
+                    << (i*N + k) << "] * B["
+                    << (k*N + i) << "]" << std::endl;*/
+                C[i*N + j] += A[i*N + k] * B[k*N + i];
+            }
+return C;
 }
 
 
 double* threaded_mmult(double* const A, double* const B, int N)
 {
-    /*int nThreads = std::thread::hardware_concurrency();
+    int num_threads = std::thread::hardware_concurrency();
+    std::cout << "num_threads: " << num_threads << std::endl;
     double* C = new2dMatrix(N, N);
-    int rows = N / nThreads;
-    int extra = N % nThreads;
+    int rows = N / num_threads;
+    int extra = N % num_threads;
     int start = 0;
     int end   = rows;
 
     std::vector<std::thread> workers;
 
-    for( int t = 1; t <= nThreads; ++t )
+    for( int t = 1; t <= num_threads; ++t )
     {
-        if( nThreads == t ) end += extra;
+        if( num_threads == t ) end += extra;
         auto loopbody = [ C, A, B ]( int start, int end, int N )
         {
-            for( int i = start; i < end; ++i )
+            /*for( int i = start; i < end; ++i )
                 for( int j = 0; j < N; ++j )
-                    C[i][j] = .0;
+                    C[i*N + j] = .0;*/
             for( int i = start; i < end; ++i )
                 for( int k = 0; k < N; ++k )
                     for( int j = 0; j < N; ++j )
-                        C[i][j] += (A[i][k] * B[k][i]);
+                        C[i*N + j] += (A[i*N + k] * B[k*N + i]);
         };
         workers.push_back(std::thread(loopbody, start, end, N));
         start = end;
@@ -77,24 +82,40 @@ double* threaded_mmult(double* const A, double* const B, int N)
     }
     for(auto& t : workers)
         t.join();
-    return C;*/
-    return nullptr;
+    return C;
 }
 
 double* omp_mmult(double* const A, double* const B, int N)
 {
+    double* C = new2dMatrix(N, N);
+    #pragma omp parallel for schedule(dynamic)
+    for(auto row = 0; row < N; ++row)
+    {
+        for(auto col = 0; col < N; ++col)
+        {
+            double& dot = C[row*N + col];
+            dot = .0;
+            for(auto i = 0; i < N; ++i)
+                dot += A[row*N + i] * B[i*N + row];
+        }
+    }
+    return C;
     return nullptr;
 }
 
+#include "cuda_mmult.h"
 
 double* cuda_mmult(double* const A, double* const B, int N)
 {
+    double* C = new2dMatrix(N, N);
+    if(do_cuda_mmult(A, B, C, N))
+        return C;
     return nullptr;
 }
 
 
 // static matrix with known outcomes.
-void fillMatrices(int matSize, double*& A, double*& B, double& TL, double& TR, double& BL, double& BR )
+void fillMatrices(int matSize, double*& A, double*& B, double& TL, double& TR, double& BL, double& BR)
 {
    A = new2dMatrix(matSize, matSize);
    B = new2dMatrix(matSize, matSize);
@@ -151,6 +172,13 @@ void run_and_time(T& funspec)
 
 extern int main( int argc, char** argv )
 {
+    if(argc < 2)
+    {
+        std::cerr << "Usage: " << argv[0]
+                  << " <matrix_size>"
+                  << std::endl;
+        return -1;
+    }
     matSize = atoi(argv[1]);
 
     #define fun(x) std::make_tuple(x, #x)
@@ -161,6 +189,7 @@ extern int main( int argc, char** argv )
     funspec funs[] = { fun(naive_mmult)
         , fun(smarter_mmult)
         , fun(threaded_mmult)
+        , fun(omp_mmult)
         , fun(cuda_mmult)
     };
 
