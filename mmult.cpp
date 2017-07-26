@@ -15,6 +15,9 @@ double* new2dMatrix(int rows, int cols)
 }
 
 
+/**
+ * plain algorithm
+ */
 double* naive_mmult(double* const A, double* const B, int N)
 {
     double* C = new2dMatrix(N, N);
@@ -32,12 +35,13 @@ double* naive_mmult(double* const A, double* const B, int N)
 }
 
 
+/**
+ * we change the access pattern here to traverse A, B, and C
+ * in a linear fashion.
+ */
 double* smarter_mmult(double* const A, double* const B, int N)
 {
     double* C = new2dMatrix(N, N);
-    /*for(auto col = 0; col < N; ++col)
-        for(auto row = 0; row < N; ++row)
-            C[row*N + col] = .0;*/
     for(auto i = 0; i < N; ++i)
         for(auto k = 0; k < N; ++k)
             for(auto j = 0; j < N; ++j)
@@ -51,6 +55,9 @@ return C;
 }
 
 
+/**
+ * hand rolled threads.
+ */
 double* threaded_mmult(double* const A, double* const B, int N)
 {
     int num_threads = std::thread::hardware_concurrency();
@@ -68,9 +75,6 @@ double* threaded_mmult(double* const A, double* const B, int N)
         if( num_threads == t ) end += extra;
         auto loopbody = [ C, A, B ]( int start, int end, int N )
         {
-            /*for( int i = start; i < end; ++i )
-                for( int j = 0; j < N; ++j )
-                    C[i*N + j] = .0;*/
             for( int i = start; i < end; ++i )
                 for( int k = 0; k < N; ++k )
                     for( int j = 0; j < N; ++j )
@@ -85,6 +89,9 @@ double* threaded_mmult(double* const A, double* const B, int N)
     return C;
 }
 
+/**
+ * uses OpenMP pragmas to spawn threads.
+ */
 double* omp_mmult(double* const A, double* const B, int N)
 {
     double* C = new2dMatrix(N, N);
@@ -103,8 +110,12 @@ double* omp_mmult(double* const A, double* const B, int N)
     return nullptr;
 }
 
+#ifdef CUDA
 #include "cuda_mmult.h"
 
+/**
+ * Do the multiplication on the graphics card.
+ */
 double* cuda_mmult(double* const A, double* const B, int N)
 {
     double* C = new2dMatrix(N, N);
@@ -112,6 +123,7 @@ double* cuda_mmult(double* const A, double* const B, int N)
         return C;
     return nullptr;
 }
+#endif /* defined(CUDA) */
 
 
 // static matrix with known outcomes.
@@ -190,7 +202,9 @@ extern int main( int argc, char** argv )
         , fun(smarter_mmult)
         , fun(threaded_mmult)
         , fun(omp_mmult)
+        #ifdef CUDA
         , fun(cuda_mmult)
+        #endif
     };
 
     for(auto& f : funs)
